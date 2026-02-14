@@ -1,0 +1,7 @@
+{
+  "name": "OVHS Interview Chat Bot",
+  "description": "A professional AI-powered interview simulator that provides real-time voice interaction and detailed performance feedback for OVHS students.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
