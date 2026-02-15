@@ -39,9 +39,14 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   const isNewTurnRef = useRef(true);
   const turnCompletionTimeoutRef = useRef<number | null>(null);
   const noResponseTimeoutRef = useRef<number | null>(null);
+  const isPreparingToSpeak = useRef(false);
 
   const userSpeechTimeout = useRef<number | null>(null);
   const processingTimeout = useRef<number | null>(null);
+  const vadDebounceTimeRef = useRef<number>(0);
+  const preRollBufferRef = useRef<Float32Array>(new Float32Array(8000)); // 500ms @ 16kHz
+  const preRollOffsetRef = useRef<number>(0);
+  const hasSentPreRollRef = useRef<boolean>(false);
 
   const setupRef = useRef(setup);
   useEffect(() => {
@@ -58,7 +63,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   // Dynamic sensitivity thresholds
   const SENSITIVITY_THRESHOLDS = {
     high: 0.005,   // Higher sensitivity
-    normal: 0.015,
+    normal: 0.012,
     low: 0.035
   };
   const activeThreshold = SENSITIVITY_THRESHOLDS[setup.micSensitivity || 'normal'];
@@ -108,17 +113,12 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
     const lastEntry = allEntriesRef.current[allEntriesRef.current.length - 1];
     if (lastEntry && lastEntry.role === role) {
-      const startsWithSpace = text.startsWith(' ');
-      const endsWithSpace = lastEntry.text.endsWith(' ');
-      const isPunctuation = /^[.,!?;:]/.test(text.trim());
-      const needsSpace = !startsWithSpace && !endsWithSpace && !isPunctuation;
-
+      const needsSpace = !lastEntry.text.endsWith(' ') && !text.startsWith(' ');
       lastEntry.text += (needsSpace ? ' ' : '') + text;
-      lastEntry.text = cleanTranscriptionText(lastEntry.text);
 
       setDisplayTranscription([...allEntriesRef.current]);
     } else {
-      const newEntry: TranscriptionEntry = { role, text: cleanTranscriptionText(text) };
+      const newEntry: TranscriptionEntry = { role, text };
       allEntriesRef.current.push(newEntry);
       setDisplayTranscription([...allEntriesRef.current]);
     }
@@ -188,31 +188,47 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               const scaledLevel = Math.min(100, (rms / activeThreshold) * 30);
               setMicLevel(scaledLevel);
 
-              const isLocked = isInterviewerSpeakingRef.current || isProcessing;
+              const isLocked = isInterviewerSpeakingRef.current || isProcessing || isPreparingToSpeak.current;
               const effectiveThreshold = isLocked ? Infinity : activeThreshold;
 
-              if (!isLocked && rms > effectiveThreshold) {
-                // User is talking, clear the silence timer
-                clearSilenceTimer();
+              // Audio Ring Buffer (Pre-roll)
+              for (let i = 0; i < inputData.length; i++) {
+                preRollBufferRef.current[preRollOffsetRef.current] = inputData[i];
+                preRollOffsetRef.current = (preRollOffsetRef.current + 1) % preRollBufferRef.current.length;
+              }
 
-                if (isInterviewerSpeakingRef.current) {
-                  stopInterviewerAudio();
+              if (!isLocked && rms > effectiveThreshold) {
+                const now = Date.now();
+                if (vadDebounceTimeRef.current === 0) {
+                  vadDebounceTimeRef.current = now;
                 }
 
-                setIsUserSpeaking(true);
-                isUserSpeakingRef.current = true;
-                setIsProcessing(false);
+                if (now - vadDebounceTimeRef.current >= 200) { // 200ms Debounce
+                  // User is talking, clear the silence timer
+                  clearSilenceTimer();
 
-                if (userSpeechTimeout.current) window.clearTimeout(userSpeechTimeout.current);
-                if (processingTimeout.current) window.clearTimeout(processingTimeout.current);
+                  if (isInterviewerSpeakingRef.current) {
+                    stopInterviewerAudio();
+                  }
 
-                userSpeechTimeout.current = window.setTimeout(() => {
-                  setIsUserSpeaking(false);
-                  isUserSpeakingRef.current = false;
-                  processingTimeout.current = window.setTimeout(() => {
-                    if (!isInterviewerSpeakingRef.current) setIsProcessing(true);
-                  }, 1000);
-                }, 500);
+                  setIsUserSpeaking(true);
+                  isUserSpeakingRef.current = true;
+                  setIsProcessing(false);
+
+                  if (userSpeechTimeout.current) window.clearTimeout(userSpeechTimeout.current);
+                  if (processingTimeout.current) window.clearTimeout(processingTimeout.current);
+
+                  userSpeechTimeout.current = window.setTimeout(() => {
+                    setIsUserSpeaking(false);
+                    isUserSpeakingRef.current = false;
+                    hasSentPreRollRef.current = false;
+                    processingTimeout.current = window.setTimeout(() => {
+                      if (!isInterviewerSpeakingRef.current) setIsProcessing(true);
+                    }, 1000);
+                  }, 500);
+                }
+              } else {
+                vadDebounceTimeRef.current = 0;
               }
 
               const l = inputData.length;
@@ -220,12 +236,32 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               for (let i = 0; i < l; i++) {
                 int16[i] = isLocked ? 0 : inputData[i] * 32768;
               }
-              const pcmBlob: Blob = {
-                data: encode(new Uint8Array(int16.buffer)),
-                mimeType: 'audio/pcm;rate=16000',
-              };
 
               sessionPromise.then((session) => {
+                // If this is the start of speech, send the pre-roll first
+                if (isUserSpeakingRef.current && !hasSentPreRollRef.current) {
+                  hasSentPreRollRef.current = true;
+                  const preRollSize = preRollBufferRef.current.length;
+                  const preRollInt16 = new Int16Array(preRollSize);
+                  const startIndex = preRollOffsetRef.current;
+
+                  for (let i = 0; i < preRollSize; i++) {
+                    const idx = (startIndex + i) % preRollSize;
+                    preRollInt16[i] = preRollBufferRef.current[idx] * 32768;
+                  }
+
+                  session.sendRealtimeInput({
+                    media: {
+                      data: encode(new Uint8Array(preRollInt16.buffer)),
+                      mimeType: 'audio/pcm;rate=16000',
+                    }
+                  });
+                }
+
+                const pcmBlob: Blob = {
+                  data: encode(new Uint8Array(int16.buffer)),
+                  mimeType: 'audio/pcm;rate=16000',
+                };
                 session.sendRealtimeInput({ media: pcmBlob });
               });
             };
@@ -244,19 +280,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
           },
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.outputTranscription) {
-              const ctx = audioContextRef.current;
-              if (ctx && isInterviewerSpeakingRef.current) {
-                const currentDelay = (nextStartTimeRef.current - ctx.currentTime) * 1000;
-                const finalDelay = isNewTurnRef.current ? Math.max(1000, currentDelay) : Math.max(0, currentDelay);
-
-                setTimeout(() => {
-                  if (isInterviewerSpeakingRef.current) {
-                    updateTranscript('interviewer', message.serverContent!.outputTranscription!.text);
-                  }
-                }, finalDelay);
-              } else if (!ctx) {
-                updateTranscript('interviewer', message.serverContent.outputTranscription.text);
-              }
+              updateTranscript('interviewer', message.serverContent.outputTranscription.text);
             } else if (message.serverContent?.inputTranscription) {
               updateTranscript('candidate', message.serverContent.inputTranscription.text);
             }
@@ -269,6 +293,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
               if (isNewTurnRef.current) {
                 isNewTurnRef.current = false;
+                isPreparingToSpeak.current = true;
                 if (turnCompletionTimeoutRef.current) window.clearTimeout(turnCompletionTimeoutRef.current);
 
                 nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime) + 0.8;
@@ -279,6 +304,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                   if (!isInterviewerSpeakingRef.current && sourcesRef.current.size > 0) {
                     setIsInterviewerSpeaking(true);
                     isInterviewerSpeakingRef.current = true;
+                    isPreparingToSpeak.current = false;
                     setIsProcessing(false);
                   }
                 }, Math.max(0, startDelayMs));
