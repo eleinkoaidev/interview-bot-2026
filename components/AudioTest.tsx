@@ -22,26 +22,38 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
   const [speakerTested, setSpeakerTested] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   const activeThreshold = SENSITIVITY_THRESHOLDS[setup.micSensitivity || 'normal'];
 
   useEffect(() => {
     const startMicTest = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        streamRef.current = stream;
-        
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        const audioCtx = new AudioCtx();
-        audioContextRef.current = audioCtx;
-        
+        if (!streamRef.current) {
+          streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        if (!audioContextRef.current) {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          audioContextRef.current = new AudioCtx();
+        }
+
+        const audioCtx = audioContextRef.current;
+
         if (audioCtx.state === 'suspended') {
           await audioCtx.resume();
         }
 
-        const source = audioCtx.createMediaStreamSource(stream);
+        if (sourceRef.current) sourceRef.current.disconnect();
+        if (scriptProcessorRef.current) scriptProcessorRef.current.disconnect();
+
+        const source = audioCtx.createMediaStreamSource(streamRef.current);
+        sourceRef.current = source;
+
         const scriptProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
-        
+        scriptProcessorRef.current = scriptProcessor;
+
         scriptProcessor.onaudioprocess = (e) => {
           const inputData = e.inputBuffer.getChannelData(0);
           let sum = 0;
@@ -49,14 +61,13 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
             sum += inputData[i] * inputData[i];
           }
           const rms = Math.sqrt(sum / inputData.length);
-          
+
           // Determine if this sound would trigger Alex
           setIsAboveThreshold(rms > activeThreshold);
 
           // Visual scaling for the UI bar (relative to the active threshold)
-          // We want the "middle" of the bar to be roughly the threshold
           const scaled = (rms / activeThreshold) * 50;
-          setMicLevel(Math.min(100, scaled)); 
+          setMicLevel(Math.min(100, scaled));
         };
 
         source.connect(scriptProcessor);
@@ -70,31 +81,51 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
     startMicTest();
 
     return () => {
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      if (audioContextRef.current) audioContextRef.current.close();
+      if (scriptProcessorRef.current) {
+        scriptProcessorRef.current.disconnect();
+        scriptProcessorRef.current.onaudioprocess = null;
+      }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+      }
     };
   }, [activeThreshold]);
 
-  const playTestSound = () => {
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
+
+  const playTestSound = async () => {
     if (!audioContextRef.current) return;
     const ctx = audioContextRef.current;
-    
-    if (ctx.state === 'suspended') ctx.resume();
+
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    
+
     osc.type = 'sine';
     osc.frequency.setValueAtTime(440, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.5);
-    
+
     gain.gain.setValueAtTime(0, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.1);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1);
-    
+
     osc.connect(gain);
     gain.connect(ctx.destination);
-    
+
     osc.start();
     osc.stop(ctx.currentTime + 1);
     setSpeakerTested(true);
@@ -120,7 +151,7 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
                 <span className="text-[10px] text-white font-mono font-bold">{activeThreshold}</span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'high', label: 'Quiet', sub: 'Home Office' },
@@ -139,7 +170,7 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
               ))}
             </div>
             <p className="text-[10px] text-gray-500 font-bold italic text-center leading-relaxed">
-              If the meter stays orange while you aren't talking, switch to <span className="text-white">NOISY</span>. 
+              If the meter stays orange while you aren't talking, switch to <span className="text-white">NOISY</span>.
               If Alex can't hear you, switch to <span className="text-white">QUIET</span>.
             </p>
           </div>
@@ -160,12 +191,12 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
                 </span>
               </div>
             </div>
-            
+
             <div className="h-4 w-full bg-gray-200 rounded-full overflow-hidden border border-gray-100 flex relative">
               {/* Threshold indicator line at 50% */}
               <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-black/20 z-10"></div>
-              
-              <div 
+
+              <div
                 className={`h-full transition-all duration-75 ease-out ${isAboveThreshold ? 'bg-[#CC5500]' : 'bg-gray-400'}`}
                 style={{ width: `${micLevel}%` }}
               ></div>

@@ -16,16 +16,19 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   const [micLevel, setMicLevel] = useState(0);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [displayTranscription, setDisplayTranscription] = useState<TranscriptionEntry[]>([]);
   const allEntriesRef = useRef<TranscriptionEntry[]>([]);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const outputChainRef = useRef<AudioNode | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const streamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const inputSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const sessionRef = useRef<any>(null);
+  const isInitialized = useRef(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   const interviewerName = setup.interviewerName || 'Alex';
@@ -33,12 +36,17 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
   const isInterviewerSpeakingRef = useRef(false);
   const isUserSpeakingRef = useRef(false);
-  const isNewTurnRef = useRef(true); 
+  const isNewTurnRef = useRef(true);
   const turnCompletionTimeoutRef = useRef<number | null>(null);
   const noResponseTimeoutRef = useRef<number | null>(null);
 
   const userSpeechTimeout = useRef<number | null>(null);
   const processingTimeout = useRef<number | null>(null);
+
+  const setupRef = useRef(setup);
+  useEffect(() => {
+    setupRef.current = setup;
+  }, [setup]);
 
   // Auto-scroll to bottom whenever transcription updates
   useEffect(() => {
@@ -70,7 +78,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
         const nudgePrompt = setup.language === 'Spanish'
           ? "[SISTEMA: El candidato no ha respondido. Por favor, pregunta amablemente si entendieron la pregunta, si necesitan que la repitas o si prefieren que la reformules de otra manera. Mantén un tono de apoyo.]"
           : "[SYSTEM: The candidate has been silent for a while. Please friendly-ly check if they understood the question, if they need you to repeat it, or if they'd like you to rephrase it in a different way. Maintain a supportive tone.]";
-        
+
         sessionRef.current.sendRealtimeInput({ text: nudgePrompt });
       }
     }, 3500);
@@ -104,10 +112,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
       const endsWithSpace = lastEntry.text.endsWith(' ');
       const isPunctuation = /^[.,!?;:]/.test(text.trim());
       const needsSpace = !startsWithSpace && !endsWithSpace && !isPunctuation;
-      
+
       lastEntry.text += (needsSpace ? ' ' : '') + text;
       lastEntry.text = cleanTranscriptionText(lastEntry.text);
-      
+
       setDisplayTranscription([...allEntriesRef.current]);
     } else {
       const newEntry: TranscriptionEntry = { role, text: cleanTranscriptionText(text) };
@@ -117,14 +125,18 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   }, []);
 
   const initSession = useCallback(async () => {
+    if (isInitialized.current) return;
+    if (sessionRef.current) return;
+    isInitialized.current = true;
+
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      
+
       await inputCtx.resume();
       await outputCtx.resume();
-      
+
       const compressor = outputCtx.createDynamicsCompressor();
       compressor.threshold.setValueAtTime(-24, outputCtx.currentTime);
       compressor.knee.setValueAtTime(40, outputCtx.currentTime);
@@ -137,11 +149,21 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
       compressor.connect(gainNode);
       gainNode.connect(outputCtx.destination);
-      
+
       audioContextRef.current = outputCtx;
       outputChainRef.current = compressor;
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const silentGain = inputCtx.createGain();
+      silentGain.gain.setValueAtTime(0, inputCtx.currentTime);
+      silentGain.connect(inputCtx.destination);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       streamRef.current = stream;
 
       const sessionPromise = ai.live.connect({
@@ -150,21 +172,26 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
           onopen: () => {
             setIsConnecting(false);
             const source = inputCtx.createMediaStreamSource(stream);
+            inputSourceRef.current = source;
             const scriptProcessor = inputCtx.createScriptProcessor(2048, 1, 1);
-            
+            scriptProcessorRef.current = scriptProcessor;
+
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
-              
+
               let sum = 0;
               for (let i = 0; i < inputData.length; i++) {
                 sum += inputData[i] * inputData[i];
               }
               const rms = Math.sqrt(sum / inputData.length);
-              
-              const scaledLevel = Math.min(100, (rms / activeThreshold) * 30);
-              setMicLevel(scaledLevel); 
 
-              if (rms > activeThreshold) {
+              const scaledLevel = Math.min(100, (rms / activeThreshold) * 30);
+              setMicLevel(scaledLevel);
+
+              const isLocked = isInterviewerSpeakingRef.current || isProcessing;
+              const effectiveThreshold = isLocked ? Infinity : activeThreshold;
+
+              if (!isLocked && rms > effectiveThreshold) {
                 // User is talking, clear the silence timer
                 clearSilenceTimer();
 
@@ -178,7 +205,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
                 if (userSpeechTimeout.current) window.clearTimeout(userSpeechTimeout.current);
                 if (processingTimeout.current) window.clearTimeout(processingTimeout.current);
-                
+
                 userSpeechTimeout.current = window.setTimeout(() => {
                   setIsUserSpeaking(false);
                   isUserSpeakingRef.current = false;
@@ -191,26 +218,27 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               const l = inputData.length;
               const int16 = new Int16Array(l);
               for (let i = 0; i < l; i++) {
-                int16[i] = inputData[i] * 32768;
+                int16[i] = isLocked ? 0 : inputData[i] * 32768;
               }
               const pcmBlob: Blob = {
                 data: encode(new Uint8Array(int16.buffer)),
                 mimeType: 'audio/pcm;rate=16000',
               };
-              
+
               sessionPromise.then((session) => {
                 session.sendRealtimeInput({ media: pcmBlob });
               });
             };
 
             source.connect(scriptProcessor);
-            scriptProcessor.connect(inputCtx.destination);
+            scriptProcessor.connect(silentGain);
 
             sessionPromise.then(session => {
-              const isSpanish = setup.language === 'Spanish';
+              const currentSetup = setupRef.current;
+              const isSpanish = currentSetup.language === 'Spanish';
               const initialPrompt = isSpanish
-                ? `El candidato, ${setup.studentName}, acaba de entrar a la sala. Por favor, dale la bienvenida calurosamente por su nombre completo en ESPAÑOL, preséntate como ${interviewerName}, ${interviewerName === 'Alex' ? 'un reclutador senior' : 'una gerente de adquisición de talento'} en ${setup.companyName}. Luego, pregúntale cómo prefiere que le llames durante la entrevista.`
-                : `The candidate, ${setup.studentName}, has just entered the room. Please welcome them warmly by their full name in ENGLISH, introduce yourself as ${interviewerName}, a ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${setup.companyName}. Then, ask them how they would prefer to be addressed during this interview.`;
+                ? `El candidato, ${currentSetup.studentName}, acaba de entrar a la sala. Por favor, dale la bienvenida calurosamente por su nombre completo en ESPAÑOL, preséntate como ${interviewerName}, ${interviewerName === 'Alex' ? 'un reclutador senior' : 'una gerente de adquisición de talento'} en ${currentSetup.companyName}. Luego, pregúntale cómo prefiere que le llames durante la entrevista.`
+                : `The candidate, ${currentSetup.studentName}, has just entered the room. Please welcome them warmly by their full name in ENGLISH, introduce yourself as ${interviewerName}, a ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${currentSetup.companyName}. Then, ask them how they would prefer to be addressed during this interview.`;
               session.sendRealtimeInput({ text: initialPrompt });
             });
           },
@@ -220,7 +248,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               if (ctx && isInterviewerSpeakingRef.current) {
                 const currentDelay = (nextStartTimeRef.current - ctx.currentTime) * 1000;
                 const finalDelay = isNewTurnRef.current ? Math.max(1000, currentDelay) : Math.max(0, currentDelay);
-                
+
                 setTimeout(() => {
                   if (isInterviewerSpeakingRef.current) {
                     updateTranscript('interviewer', message.serverContent!.outputTranscription!.text);
@@ -238,11 +266,11 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               clearSilenceTimer(); // Interviewer starts outputting audio
               const ctx = audioContextRef.current!;
               const chain = outputChainRef.current!;
-              
+
               if (isNewTurnRef.current) {
                 isNewTurnRef.current = false;
                 if (turnCompletionTimeoutRef.current) window.clearTimeout(turnCompletionTimeoutRef.current);
-                
+
                 nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime) + 0.8;
                 setIsProcessing(true);
 
@@ -259,8 +287,8 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
               const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
               const source = ctx.createBufferSource();
               source.buffer = audioBuffer;
-              source.connect(chain); 
-              
+              source.connect(chain);
+
               source.onended = () => {
                 if (sourcesRef.current) {
                   sourcesRef.current.delete(source);
@@ -325,12 +353,16 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
       setIsConnecting(false);
       console.error("Initialization failed", err);
     }
-  }, [setup, updateTranscript, activeThreshold, stopInterviewerAudio, interviewerName, interviewerVoice, startSilenceTimer, clearSilenceTimer]);
+  }, [updateTranscript, activeThreshold, stopInterviewerAudio, interviewerName, interviewerVoice, startSilenceTimer, clearSilenceTimer]);
 
   useEffect(() => {
     initSession();
     return () => {
-      if (sessionRef.current) sessionRef.current.close();
+      if (sessionRef.current) {
+        sessionRef.current.close();
+        sessionRef.current = null;
+      }
+      isInitialized.current = false;
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       if (userSpeechTimeout.current) window.clearTimeout(userSpeechTimeout.current);
       if (processingTimeout.current) window.clearTimeout(processingTimeout.current);
@@ -343,7 +375,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     onEnd([...allEntriesRef.current]);
   };
 
-  const statusText = setup.language === 'Spanish' 
+  const statusText = setup.language === 'Spanish'
     ? (isInterviewerSpeaking ? `${interviewerName} está hablando` : isProcessing ? `${interviewerName} está reflexionando...` : isUserSpeaking ? `${interviewerName} está escuchando...` : `${interviewerName} está listo`)
     : (isInterviewerSpeaking ? `${interviewerName} is speaking` : isProcessing ? `${interviewerName} is reflecting...` : isUserSpeaking ? `${interviewerName} is listening...` : `${interviewerName} is ready`);
 
@@ -377,15 +409,15 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                 <div className={`w-48 h-48 rounded-full flex items-center justify-center transition-all duration-500 ${isInterviewerSpeaking ? 'bg-black scale-105 shadow-2xl shadow-[#CC5500]/40 border-4 border-[#CC5500]' : isProcessing ? 'bg-gray-800 scale-100 shadow-xl border-4 border-gray-600' : isUserSpeaking ? 'bg-[#CC5500] scale-105 shadow-2xl shadow-[#CC5500]/20 border-4 border-white' : 'bg-gray-100 border-4 border-gray-200'}`}>
                   {isInterviewerSpeaking ? (
                     <div className="flex items-center space-x-1.5">
-                       <div className="w-2 h-8 bg-[#CC5500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                       <div className="w-2 h-12 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                       <div className="w-2 h-8 bg-[#CC5500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-8 bg-[#CC5500] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                      <div className="w-2 h-12 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-8 bg-[#CC5500] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
                   ) : isProcessing ? (
                     <div className="flex space-x-1">
-                       <div className="w-2.5 h-2.5 bg-[#CC5500] rounded-full animate-pulse" style={{ animationDelay: '0s' }}></div>
-                       <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                       <div className="w-2.5 h-2.5 bg-[#CC5500] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      <div className="w-2.5 h-2.5 bg-[#CC5500] rounded-full animate-pulse" style={{ animationDelay: '0s' }}></div>
+                      <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2.5 h-2.5 bg-[#CC5500] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                     </div>
                   ) : (
                     <div className="relative">
@@ -397,7 +429,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                   )}
                 </div>
                 {(isInterviewerSpeaking || isProcessing) && (
-                   <div className={`absolute -inset-6 rounded-full animate-pulse -z-10 ${isInterviewerSpeaking ? 'bg-[#CC5500]/10' : 'bg-gray-500/10'}`}></div>
+                  <div className={`absolute -inset-6 rounded-full animate-pulse -z-10 ${isInterviewerSpeaking ? 'bg-[#CC5500]/10' : 'bg-gray-500/10'}`}></div>
                 )}
               </div>
 
@@ -405,10 +437,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                 <p className={`text-xl font-black uppercase tracking-widest transition-colors duration-300 ${isInterviewerSpeaking ? 'text-[#CC5500]' : isProcessing ? 'text-gray-700' : isUserSpeaking ? 'text-black' : 'text-gray-400'}`}>
                   {statusText}
                 </p>
-                
+
                 <div className="space-y-1">
                   <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden border border-gray-100">
-                    <div 
+                    <div
                       className={`h-full transition-all duration-150 ${isUserSpeaking ? 'bg-[#CC5500]' : 'bg-black'}`}
                       style={{ width: `${micLevel}%` }}
                     ></div>
