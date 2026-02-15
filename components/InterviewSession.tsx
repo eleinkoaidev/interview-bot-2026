@@ -57,9 +57,9 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
   // Dynamic sensitivity thresholds
   const SENSITIVITY_THRESHOLDS = {
-    high: 0.008,   // Quiet room
-    normal: 0.02,  // Default
-    low: 0.045     // Noisy classroom/shared space
+    high: 0.005,   // Higher sensitivity
+    normal: 0.015,
+    low: 0.035
   };
   const activeThreshold = SENSITIVITY_THRESHOLDS[setup.micSensitivity || 'normal'];
 
@@ -211,8 +211,8 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                   isUserSpeakingRef.current = false;
                   processingTimeout.current = window.setTimeout(() => {
                     if (!isInterviewerSpeakingRef.current) setIsProcessing(true);
-                  }, 1200);
-                }, 600);
+                  }, 1000);
+                }, 500);
               }
 
               const l = inputData.length;

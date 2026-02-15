@@ -10,9 +10,9 @@ interface AudioTestProps {
 }
 
 const SENSITIVITY_THRESHOLDS = {
-  high: 0.008,   // Quiet room
-  normal: 0.02,  // Default
-  low: 0.045     // Noisy classroom/shared space
+  high: 0.005,
+  normal: 0.015,
+  low: 0.035
 };
 
 const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCancel }) => {
