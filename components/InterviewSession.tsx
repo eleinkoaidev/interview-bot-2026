@@ -5,6 +5,8 @@ import { InterviewSetup, TranscriptionEntry } from '../types';
 import { decode, encode, decodeAudioData } from '../utils/audioUtils';
 import { cleanTranscriptionText } from '../utils/stringUtils';
 
+const sanitizeInput = (str: string) => str.replace(/[^a-zA-Z0-9\s.,?!'-]/g, '').trim();
+
 interface InterviewSessionProps {
   setup: InterviewSetup;
   onEnd: (transcription: TranscriptionEntry[]) => void;
@@ -271,10 +273,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
 
             sessionPromise.then(session => {
               const currentSetup = setupRef.current;
+              const sanitizedStudentName = sanitizeInput(currentSetup.studentName);
+              const sanitizedCompanyName = sanitizeInput(currentSetup.companyName);
               const isSpanish = currentSetup.language === 'Spanish';
+
               const initialPrompt = isSpanish
-                ? `El candidato, ${currentSetup.studentName}, acaba de entrar a la sala. Por favor, dale la bienvenida calurosamente por su nombre completo en ESPAÑOL, preséntate como ${interviewerName}, ${interviewerName === 'Alex' ? 'un reclutador senior' : 'una gerente de adquisición de talento'} en ${currentSetup.companyName}. Luego, pregúntale cómo prefiere que le llames durante la entrevista.`
-                : `The candidate, ${currentSetup.studentName}, has just entered the room. Please welcome them warmly by their full name in ENGLISH, introduce yourself as ${interviewerName}, a ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${currentSetup.companyName}. Then, ask them how they would prefer to be addressed during this interview.`;
+                ? `El candidato, ${sanitizedStudentName}, acaba de entrar a la sala. Por favor, dale la bienvenida calurosamente por su nombre completo en ESPAÑOL, preséntate como ${interviewerName}, ${interviewerName === 'Alex' ? 'un reclutador senior' : 'una gerente de adquisición de talento'} en ${sanitizedCompanyName}. Luego, pregúntale cómo prefiere que le llames durante la entrevista.`
+                : `The candidate, ${sanitizedStudentName}, has just entered the room. Please welcome them warmly by their full name in ENGLISH, introduce yourself as ${interviewerName}, a ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${sanitizedCompanyName}. Then, ask them how they would prefer to be addressed during this interview.`;
               session.sendRealtimeInput({ text: initialPrompt });
             });
           },
@@ -353,17 +358,17 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are ${interviewerName}, a professional ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${setup.companyName} conducting an entry-level interview.
+          systemInstruction: `You are ${interviewerName}, a professional ${interviewerName === 'Alex' ? 'senior recruiter' : 'talent acquisition manager'} at ${sanitizeInput(setup.companyName)} conducting an entry-level interview.
           
           LANGUAGE: Conduct this entire interview in ${setup.language}. 
           FIELD: ${setup.careerField}
-          CANDIDATE: High school student named ${setup.studentName}, ${setup.experience}.
+          CANDIDATE: High school student named ${sanitizeInput(setup.studentName)}, ${setup.experience}.
           ROLE: ${setup.jobTitle}.
           
           Always sound alert, professional, supportive, and clear in ${setup.language}.
           
           CRITICAL BEHAVIOR: 
-          - Welcome the student by their FULL NAME initially: ${setup.studentName}.
+          - Welcome the student by their FULL NAME initially: ${sanitizeInput(setup.studentName)}.
           - IMMEDIATELY after welcoming them, ask how they would prefer to be addressed (e.g., first name, nickname, or Mr./Ms. [Last Name]).
           - Once they provide a preference, use ONLY that preferred name for the rest of the interview to keep the tone natural and professional.
           - BARGE-IN HANDLING: If the candidate starts speaking while you are talking, you MUST stop talking immediately. Your server sends an 'interrupted' signal—acknowledge it silently by waiting for them to finish.
@@ -485,7 +490,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
           )}
         </div>
 
-        <div className="bg-gray-50 p-6 border-t border-gray-100 h-48 overflow-y-auto">
+        <div className="bg-gray-50 p-6 border-t border-gray-100 h-48 overflow-y-auto hidden">
           <p className="text-[10px] font-black text-[#CC5500] uppercase tracking-[0.2em] mb-4">
             {setup.language === 'Spanish' ? 'Transcripción en tiempo real' : 'Real-time Transcript Feed'}
           </p>
