@@ -6,14 +6,14 @@ import { cleanTranscriptionText } from "../utils/stringUtils";
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runAnalysisRequest(
-  setup: InterviewSetup, 
-  transcriptText: string, 
-  modelName: string, 
+  setup: InterviewSetup,
+  transcriptText: string,
+  modelName: string,
   isFallback: boolean = false
 ): Promise<Feedback> {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: "AIzaSyDEYYpKqolWP3Pbm6_q9dgppE-wuoRR6Ms" });
   const interviewerName = setup.interviewerName || 'Alex';
-  
+
   const baseInstruction = `You are a strict CTE Compliance Auditor. Your job is to score students based ONLY on the evidence in the transcript.
       
       OUTPUT RULES:
@@ -108,9 +108,9 @@ async function runAnalysisRequest(
 
   const text = response.text;
   if (!text) throw new Error("Empty response from AI");
-  
+
   const feedback = JSON.parse(text) as Feedback;
-  
+
   // Safety check: ensure no metric exceeds its weight
   feedback.metricDetails = feedback.metricDetails.map(m => ({
     ...m,
@@ -150,7 +150,7 @@ export async function analyzeInterview(
     return result;
   } catch (error: any) {
     console.warn("Pro analysis failed, attempting retry/fallback...", error);
-    
+
     if (error.status === 429 || error.message?.includes('429')) {
       await sleep(2000);
       try {
@@ -170,8 +170,8 @@ export async function analyzeInterview(
       return result;
     } catch (fallbackError) {
       console.error("Critical: Fallback analysis also failed.");
-      throw new Error(setup.language === 'Spanish' 
-        ? "No se pudo realizar el análisis. Inténtelo de nuevo más tarde." 
+      throw new Error(setup.language === 'Spanish'
+        ? "No se pudo realizar el análisis. Inténtelo de nuevo más tarde."
         : "Failed to perform analysis. Please try again later.");
     }
   }

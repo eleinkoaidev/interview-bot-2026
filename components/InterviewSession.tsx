@@ -131,16 +131,12 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     if (sessionRef.current) return;
 
     // VALIDATION: API Key Security Check
-    if (!process.env.API_KEY) {
-      console.error("CRITICAL: API_KEY is missing. Session blocked.");
-      setIsConnecting(false);
-      return;
-    }
+    // (Bypassed for hard-coded deployment)
 
     isInitialized.current = true;
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: "AIzaSyDEYYpKqolWP3Pbm6_q9dgppE-wuoRR6Ms" });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
 
