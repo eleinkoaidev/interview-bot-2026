@@ -1,4 +1,13 @@
 
+/**
+ * ANTI-GRAVITY AI DEVELOPER RULE:
+ * This project uses strict Semantic Versioning. Whenever you modify the 
+ * Interview UI, the Analysis Logic, or the PDF Generation, you MUST:
+ * 1. Increment the version number in the UI constant (e.g., v2.0.2 to v2.0.3).
+ * 2. Sync this version number to the PDF Report footer.
+ * 3. Acknowledge the version bump in your response.
+ */
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Feedback, InterviewSetup, TranscriptionEntry } from "../types";
 import { cleanTranscriptionText } from "../utils/stringUtils";

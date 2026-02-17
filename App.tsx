@@ -1,4 +1,13 @@
 
+/**
+ * ANTI-GRAVITY AI DEVELOPER RULE:
+ * This project uses strict Semantic Versioning. Whenever you modify the 
+ * Interview UI, the Analysis Logic, or the PDF Generation, you MUST:
+ * 1. Increment the version number in the UI constant (e.g., v2.0.2 to v2.0.3).
+ * 2. Sync this version number to the PDF Report footer.
+ * 3. Acknowledge the version bump in your response.
+ */
+
 import React, { useState } from 'react';
 import Header from './components/Header';
 import SetupForm from './components/SetupForm';
@@ -131,7 +140,7 @@ const App: React.FC = () => {
           <p className="text-gray-500 text-[10px] flex items-center justify-center space-x-2">
             <span>&copy; 2026 OVHS Interviews. All Rights Reserved.</span>
             <span className="text-[#CC5500]/40">•</span>
-            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v2.0.1-stable</span>
+            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v2.0.2-stable</span>
           </p>
         </div>
       </footer>

@@ -330,6 +330,13 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
             </div>
           </div>
         )}
+
+        {/* PDF Version Footer */}
+        <div className="pdf-section pt-8 pb-4 text-center">
+          <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
+            Build: v2.0.2-stable
+          </p>
+        </div>
       </div>
 
       <div className="flex justify-center pt-8 pb-12 space-x-4">
