@@ -201,7 +201,12 @@ export async function analyzeInterview(
   }
 
   const isPartial = totalCandidateWords < 30;
-  const transcriptText = transcription
+  const cleanedTranscription = transcription.map(entry => ({
+    ...entry,
+    text: entry.text.replace(/\s+/g, ' ').trim()
+  }));
+
+  const transcriptText = cleanedTranscription
     .map(entry => {
       const cleaned = cleanTranscriptionText(entry.text);
       const roleLabel = entry.role === 'interviewer' ? (setup.interviewerName || 'Alex') : 'Student';
@@ -213,6 +218,7 @@ export async function analyzeInterview(
     const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-pro-preview');
     result.isPartial = isPartial;
     result.isLowPowerMode = false;
+    result.transcript = cleanedTranscription;
     return result;
   } catch (error: any) {
     console.warn("Pro analysis failed, attempting retry/fallback...", error);
@@ -223,6 +229,7 @@ export async function analyzeInterview(
         const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-pro-preview');
         result.isPartial = isPartial;
         result.isLowPowerMode = false;
+        result.transcript = cleanedTranscription;
         return result;
       } catch (retryError) {
         console.warn("Pro retry failed, engaging emergency Flash fallback.");
@@ -233,6 +240,7 @@ export async function analyzeInterview(
       const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-flash-preview', true);
       result.isPartial = isPartial;
       result.isLowPowerMode = true;
+      result.transcript = cleanedTranscription;
       return result;
     } catch (fallbackError) {
       console.error("Critical: Fallback analysis also failed.");

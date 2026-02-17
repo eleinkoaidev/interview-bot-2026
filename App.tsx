@@ -26,16 +26,16 @@ const App: React.FC = () => {
 
   const confirmAudio = () => {
     if (!setup) return;
-    
+
     // Randomly select interviewer persona
     const persona = INTERVIEWERS[Math.floor(Math.random() * INTERVIEWERS.length)];
-    
+
     setSetup({
       ...setup,
       interviewerName: persona.name,
       interviewerVoice: persona.voice
     });
-    
+
     setState(AppState.INTERVIEWING);
   };
 
@@ -45,7 +45,7 @@ const App: React.FC = () => {
 
   const endInterview = async (transcription: TranscriptionEntry[]) => {
     if (!setup) return;
-    
+
     setState(AppState.ANALYZING);
     setAnalysisError(null);
     try {
@@ -68,18 +68,18 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1">
         {state === AppState.SETUP && (
           <SetupForm onStart={startSetup} />
         )}
 
         {state === AppState.TESTING && setup && (
-          <AudioTest 
-            setup={setup} 
+          <AudioTest
+            setup={setup}
             setSetup={setSetup}
-            onConfirm={confirmAudio} 
-            onCancel={cancelSetup} 
+            onConfirm={confirmAudio}
+            onCancel={cancelSetup}
           />
         )}
 
@@ -131,7 +131,7 @@ const App: React.FC = () => {
           <p className="text-gray-500 text-[10px] flex items-center justify-center space-x-2">
             <span>&copy; 2026 OVHS Interviews. All Rights Reserved.</span>
             <span className="text-[#CC5500]/40">•</span>
-            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v1.4.7-stable</span>
+            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v2.0.1-stable</span>
           </p>
         </div>
       </footer>

@@ -38,7 +38,10 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
     partialBanner: isSpanish ? 'SESIÓN PARCIAL DETECTADA' : 'PARTIAL SESSION DETECTED',
     partialDescription: isSpanish
       ? 'Esta entrevista finalizó antes de completar todas las fases. Las puntuaciones reflejan solo la evidencia proporcionada.'
-      : 'This interview was ended before completion. Scores reflect only the limited evidence provided.'
+      : 'This interview was ended before completion. Scores reflect only the limited evidence provided.',
+    transcriptTitle: isSpanish ? 'Transcripción Completa de la Entrevista' : 'Full Interview Transcript',
+    interviewerLabel: isSpanish ? 'Entrevistador' : 'Interviewer',
+    candidateLabel: isSpanish ? 'Candidato' : 'Candidate',
   };
 
   const handleDownloadPDF = () => {
@@ -155,7 +158,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
               <h1 className="text-3xl lg:text-4xl font-black text-gray-900 leading-tight uppercase tracking-tight">
                 {feedback.assessmentMode === 'student' ? t.coachFeedback : t.summary}
               </h1>
-              <p className="text-gray-600 leading-relaxed text-lg font-medium">
+              <p className="text-gray-600 leading-relaxed text-lg font-medium text-left">
                 {feedback.summary}
               </p>
             </div>
@@ -309,6 +312,24 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
             </span>
           </div>
         </div>
+
+        {feedback.transcript && (
+          <div className="pdf-section bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight">{t.transcriptTitle}</h2>
+            <div className="space-y-4 border-t border-gray-100 pt-6">
+              {feedback.transcript.map((entry, i) => (
+                <div key={i} className="flex flex-col space-y-1">
+                  <p className="font-black text-gray-400 uppercase tracking-widest text-[8px]">
+                    {entry.role === 'interviewer' ? t.interviewerLabel : t.candidateLabel}:
+                  </p>
+                  <p className="text-gray-700 text-[10px] sm:text-[9pt] leading-relaxed text-left">
+                    {entry.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-center pt-8 pb-12 space-x-4">

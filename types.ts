@@ -42,6 +42,7 @@ export interface Feedback {
   isPartial?: boolean;
   isLowPowerMode?: boolean;
   assessmentMode: 'student' | 'professional';
+  transcript?: TranscriptionEntry[];
 }
 
 export enum AppState {
