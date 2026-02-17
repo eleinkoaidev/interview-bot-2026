@@ -10,6 +10,7 @@ export interface InterviewSetup {
   micSensitivity: 'high' | 'normal' | 'low';
   interviewerName?: string;
   interviewerVoice?: string;
+  difficulty: 'student' | 'professional';
 }
 
 export interface FeedbackMetrics {
@@ -40,6 +41,7 @@ export interface Feedback {
   }[];
   isPartial?: boolean;
   isLowPowerMode?: boolean;
+  assessmentMode: 'student' | 'professional';
 }
 
 export enum AppState {

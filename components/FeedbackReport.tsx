@@ -12,7 +12,7 @@ interface FeedbackReportProps {
 const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRestart }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
-  
+
   const isSpanish = setup.language === 'Spanish';
   const interviewerName = setup.interviewerName || 'Alex';
 
@@ -31,9 +31,13 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
     notes: isSpanish ? `Notas de ${interviewerName}` : `${interviewerName}'s Notes`,
     tryAnother: isSpanish ? 'Probar otro campo' : 'Try Another Field',
     date: isSpanish ? 'Fecha Generada' : 'Date Generated',
+    assessmentMode: isSpanish ? 'Modo de Evaluación' : 'Assessment Mode',
+    studentMode: isSpanish ? 'Entrevista de Práctica Profesional' : 'Professional Mock Interview',
+    proMode: isSpanish ? 'Auditoría de Cumplimiento CTE' : 'CTE Compliance Audit',
+    coachFeedback: isSpanish ? 'Comentarios del Entrenador' : "Coach's Feedback",
     partialBanner: isSpanish ? 'SESIÓN PARCIAL DETECTADA' : 'PARTIAL SESSION DETECTED',
-    partialDescription: isSpanish 
-      ? 'Esta entrevista finalizó antes de completar todas las fases. Las puntuaciones reflejan solo la evidencia proporcionada.' 
+    partialDescription: isSpanish
+      ? 'Esta entrevista finalizó antes de completar todas las fases. Las puntuaciones reflejan solo la evidencia proporcionada.'
       : 'This interview was ended before completion. Scores reflect only the limited evidence provided.'
   };
 
@@ -43,17 +47,17 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
 
     const safeName = setup.studentName.replace(/\s+/g, '_');
     const safeJob = setup.jobTitle.replace(/\s+/g, '_');
-    
+
     const element = reportRef.current;
-    
+
     // Configure options specifically to handle page breaks better
     const opt = {
       margin: [0.5, 0.5, 0.5, 0.5],
       filename: `Interview_Report_${safeName}_${safeJob}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
         logging: false,
         letterRendering: true,
         scrollY: -window.scrollY // Fixes issues where scrolling affects capture
@@ -94,7 +98,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
           className={`flex items-center space-x-2 px-6 py-3 bg-[#CC5500] text-white font-black rounded-xl shadow-lg hover:bg-black transition-all uppercase tracking-widest text-xs ${isDownloading ? 'opacity-50 cursor-wait' : ''}`}
         >
           {isDownloading ? (
-             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -124,9 +128,17 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
             <div>
               <p className="text-[#CC5500] font-black uppercase tracking-[0.2em] text-xs mb-1">{t.title}</p>
               <h1 className="text-3xl font-black text-black uppercase tracking-tight">{setup.jobTitle}</h1>
-              <div className="mt-2">
-                <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{t.candidate}</p>
-                <p className="text-black font-black text-xl uppercase tracking-tight">{setup.studentName}</p>
+              <div className="mt-2 flex items-center space-x-6">
+                <div>
+                  <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{t.candidate}</p>
+                  <p className="text-black font-black text-xl uppercase tracking-tight">{setup.studentName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{t.assessmentMode}</p>
+                  <p className="text-[#CC5500] font-black text-xs uppercase tracking-widest">
+                    {feedback.assessmentMode === 'professional' ? t.proMode : t.studentMode}
+                  </p>
+                </div>
               </div>
               <p className="text-gray-500 font-bold text-sm mt-1">{setup.careerField} • {setup.companyName}</p>
             </div>
@@ -141,13 +153,13 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
           <div className="flex flex-col md:flex-row gap-10 items-center">
             <div className="flex-1 space-y-4">
               <h1 className="text-3xl lg:text-4xl font-black text-gray-900 leading-tight uppercase tracking-tight">
-                {t.summary}
+                {feedback.assessmentMode === 'student' ? t.coachFeedback : t.summary}
               </h1>
               <p className="text-gray-600 leading-relaxed text-lg font-medium">
                 {feedback.summary}
               </p>
             </div>
-            
+
             <div className="relative w-48 h-48 flex items-center justify-center flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
@@ -186,7 +198,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t.standards}</p>
             </div>
             <div className="hidden sm:block bg-gray-50 rounded-2xl p-4 border border-gray-100">
-               <RadarChart metrics={feedback.metrics} />
+              <RadarChart metrics={feedback.metrics} />
             </div>
           </div>
 
@@ -215,7 +227,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
                   </div>
 
                   <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden mb-4 border border-gray-100">
-                    <div 
+                    <div
                       className={`h-full ${percentage < 40 ? 'bg-red-500' : 'bg-[#CC5500]'}`}
                       style={{ width: `${Math.min(100, percentage)}%` }}
                     ></div>
@@ -289,10 +301,13 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         </div>
 
         <div className="pdf-section px-8 pb-4">
-           <div className={`text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center p-4 rounded-2xl border-2 ${feedback.isLowPowerMode ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
-              <span className="mr-2">{feedback.isLowPowerMode ? '⚡' : '✨'}</span>
-              <span>{feedback.isLowPowerMode ? 'Grading Audit completed by Gemini Flash (High Speed Mode)' : 'Grading Audit completed by Gemini Pro (High Precision Mode)'}</span>
-           </div>
+          <div className={`text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center p-4 rounded-2xl border-2 ${feedback.isLowPowerMode ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
+            <span className="mr-2">{feedback.isLowPowerMode ? '⚡' : '✨'}</span>
+            <span>
+              {feedback.assessmentMode === 'professional' ? 'Industry Audit' : 'Mock Interview'}
+              {' '}Mode • {feedback.isLowPowerMode ? 'Gemini Flash' : 'Gemini Pro'} Performance Engine
+            </span>
+          </div>
         </div>
       </div>
 

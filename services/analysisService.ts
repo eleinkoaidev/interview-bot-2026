@@ -12,23 +12,83 @@ async function runAnalysisRequest(
   isFallback: boolean = false
 ): Promise<Feedback> {
   const ai = new GoogleGenAI({ apiKey: "AIzaSyDEYYpKqolWP3Pbm6_q9dgppE-wuoRR6Ms" });
-  const interviewerName = setup.interviewerName || 'Alex';
 
-  const baseInstruction = `You are a strict CTE Compliance Auditor. Your job is to score students based ONLY on the evidence in the transcript.
+  const isSpanish = setup.language === 'Spanish';
+
+  const studentInstruction = isSpanish
+    ? `Eres un "Mentor de Carrera" realizando una 'Entrevista de Práctica'. 
+      Mantén altas expectativas profesionales para la atmósfera, pero usa una 'Mentalidad de Crecimiento' para la calificación.
       
-      OUTPUT RULES:
-      1. LANGUAGE: ${setup.language}.
-      2. MATH: Metric scores must be integers between 0 and 20.
-      3. TOTAL: The 'score' field must equal the sum of the five metrics.
-      4. FEEDBACK: Be specific. Mention exact phrases from the transcript.
+      REGLAS DE IDIOMA (MANDATORIO):
+      1. TODO el texto generado (Resumen, Justificaciones, Fortalezas, Mejoras, Análisis Detallado) DEBE estar en ESPAÑOL profesional.
+      2. Usa terminología profesional de la industria (ej. "habilidades técnicas").
+      3. Traduce "Glows and Grows" como "Fortalezas" y "Mapa de Crecimiento" en tus explicaciones.
+      
+      REGLAS DE CALIFICACIÓN:
+      1. Otorga crédito parcial por esfuerzo y honestidad. 
+      2. Proporciona exactamente 3 'Fortalezas' (Glows) y 3 áreas de 'Mapa de Crecimiento' (Grows) en los comentarios.
+      3. Anima al estudiante a revisar su transcripción e intentar de nuevo para superar su puntaje.
+      4. MATEMÁTICAS: Los puntajes de las métricas deben ser números enteros entre 0 y 20.
+      5. TOTAL: El campo 'score' debe ser igual a la suma de las cinco métricas.
+      
+      Devuelve JSON siguiendo el esquema proporcionado.`
+    : `You are a Professional Mentor conducting a 'Mock Interview'. 
+      Set high professional expectations for the atmosphere, but use a 'Growth Mindset' for the grading.
+      
+      LANGUAGE RULES:
+      1. ALL generated text MUST be in ENGLISH.
+      
+      GRADING RULES:
+      1. Award partial credit for effort and honesty. 
+      2. Provide exactly 3 'Glows' (strengths) and 3 'Grows' (specific areas to improve for next time) in the feedback.
+      3. Encourage the student to review their transcript and try again to beat their score.
+      4. MATH: Metric scores must be integers between 0 and 20.
+      5. TOTAL: The 'score' field must equal the sum of the five metrics.
       
       Return JSON following the provided schema.`;
 
-  const fallbackInstruction = `PERSONA: Strict CTE Compliance Auditor (Emergency Mode). 
+  const proInstruction = isSpanish
+    ? `Eres un Auditor de Cumplimiento CTE estricto (Auditoría de Cumplimiento CTE). Tu trabajo es calificar a los estudiantes basándote ÚNICAMENTE en los estándares de la industria y las pruebas en la transcripción.
+      
+      REGLAS DE IDIOMA (MANDATORIO):
+      1. TODO el texto generado DEBE estar en ESPAÑOL profesional.
+      
+      REGLAS DE CALIFICACIÓN:
+      1. Sin inflación de calificaciones; si faltan pruebas, califica con 0.
+      2. Sé directo y honesto en la auditoría de desempeño.
+      3. MATEMÁTICAS: Los puntajes de las métricas deben ser números enteros entre 0 y 20.
+      4. TOTAL: El campo 'score' debe ser igual a la suma de las cinco métricas.
+      
+      Devuelve JSON siguiendo el esquema proporcionado.`
+    : `You are a strict CTE Compliance Auditor (CTE Compliance Audit). Your job is to score students based ONLY on the industry standards and evidence in the transcript.
+      
+      LANGUAGE RULES:
+      1. ALL generated text MUST be in ENGLISH.
+      
+      GRADING RULES:
+      1. No grade inflation; if evidence is missing, score it 0.
+      2. Be blunt and honest performance auditing.
+      3. MATH: Metric scores must be integers between 0 and 20.
+      4. TOTAL: The 'score' field must equal the sum of the five metrics.
+      
+      Return JSON following the provided schema.`;
+
+  const baseInstruction = setup.difficulty === 'professional' ? proInstruction : studentInstruction;
+
+  const fallbackInstruction = isSpanish
+    ? `PERSONA: ${setup.difficulty === 'professional' ? 'Auditor de Cumplimiento CTE' : 'Mentor de Carrera'} (Modo de Emergencia). 
+      TAREA: Califica esta transcripción basándote ÚNICAMENTE en la evidencia. 
+      REGLAS: 
+      1. IDIOMA: TODO EL TEXTO EN ESPAÑOL.
+      2. ${setup.difficulty === 'professional' ? 'Sin inflación de calificaciones; auditoría de desempeño directa.' : 'Altas expectativas pero Mentalidad de Crecimiento; crédito parcial por esfuerzo.'}
+      3. Verifica todas las matemáticas; suma manualmente las 5 métricas.
+      
+      Devuelve JSON siguiendo el esquema proporcionado.`
+    : `PERSONA: ${setup.difficulty === 'professional' ? 'Strict CTE Compliance Auditor' : 'Professional Mentor'} (Emergency Mode). 
       TASK: Score this transcript based ONLY on evidence. 
       RULES: 
-      1. No grade inflation; if evidence is missing for a category, score it 0. 
-      2. Be blunt and honest; high school students need the truth to grow. 
+      1. LANGUAGE: ALL TEXT IN ENGLISH.
+      2. ${setup.difficulty === 'professional' ? 'No grade inflation; blunt performance auditing.' : 'High expectations but Growth Mindset; partial credit for effort.'}
       3. Double-check all math; manually sum the 5 metrics to ensure the total 'score' is mathematically perfect.
       
       Return JSON following the provided schema.`;
@@ -36,6 +96,8 @@ async function runAnalysisRequest(
   const response = await ai.models.generateContent({
     model: modelName,
     contents: `Perform a final performance audit on this transcript.
+    
+    ASSESSMENT MODE: ${setup.difficulty === 'professional' ? 'Professional (Audit)' : 'Student (Mock Interview)'}
     
     SCORING ARCHITECTURE (CRITICAL):
     There are 5 categories. Each category MUST be scored from 0 to 20.
@@ -48,9 +110,12 @@ async function runAnalysisRequest(
     The TOTAL SCORE must be the SUM of these five categories (Max 100).
     
     GRADING RIGOR:
-    - Unprofessional, dismissive, or rude behavior MUST result in a score of 0-5 for Communication, even if the candidate is technically correct.
-    - If evidence is missing (e.g., no technical question asked), score that category 0.
-    - Do not be "generous." High school students need honest feedback to grow.
+    ${setup.difficulty === 'professional'
+        ? `- STRICT AUDIT: Do not be "generous." If evidence is missing, score 0. Be blunt.
+         - Unprofessional behavior = score 0-5.`
+        : `- MOCK INTERVIEW: Use a coaching tone. Avoid harsh phrases like "fundamentally lacked."
+         - SCORING FLOOR: If the student attempted an answer, give 5-8 points minimum for effort. Only give 0 if there is NO audio for that section.
+         - MISTAKE HANDLING: For major errors (e.g. phone use), score low (5/20) but explain the professional standard gently.`}
     
     TRANSCRIPT:
     ${transcriptText}
@@ -65,6 +130,7 @@ async function runAnalysisRequest(
           summary: { type: Type.STRING },
           strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
           improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+          assessmentMode: { type: Type.STRING, enum: ["student", "professional"] },
           metrics: {
             type: Type.OBJECT,
             properties: {
@@ -101,7 +167,7 @@ async function runAnalysisRequest(
             }
           }
         },
-        required: ["score", "summary", "strengths", "improvements", "metrics", "metricDetails", "detailedAnalysis"]
+        required: ["score", "summary", "strengths", "improvements", "metrics", "metricDetails", "detailedAnalysis", "assessmentMode"]
       }
     }
   });

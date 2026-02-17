@@ -69,7 +69,7 @@ const JOBS_BY_FIELD: Record<string, string[]> = {
 const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
   const [isOther, setIsOther] = useState(false);
   const fields = Object.keys(JOBS_BY_FIELD).sort((a, b) => a.localeCompare(b));
-  
+
   const [setup, setSetup] = useState<InterviewSetup>({
     studentName: '',
     careerField: fields[0],
@@ -78,7 +78,8 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
     experience: 'High School Student / Entry Level',
     interviewType: 'Behavioral & Basic Technical',
     language: 'English',
-    micSensitivity: 'normal'
+    micSensitivity: 'normal',
+    difficulty: 'student'
   });
 
   const handleFieldChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -115,7 +116,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
         <p className="text-gray-500 mb-8 font-medium">
           Personalize your session to get the most accurate feedback.
         </p>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Student Full Name</label>
@@ -208,6 +209,25 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div>
+              <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Interview Level</label>
+              <select
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-[#CC5500] outline-none font-bold text-gray-900 bg-gray-50"
+                value={setup.difficulty}
+                onChange={(e) => setSetup({ ...setup, difficulty: e.target.value as 'student' | 'professional' })}
+              >
+                <option value="student">Professional Mock Interview</option>
+                <option value="professional">CTE Compliance Audit</option>
+              </select>
+              <p className="mt-2 text-xs text-gray-500 font-medium">
+                {setup.difficulty === 'student'
+                  ? "Realistic expectations with a focus on growth and mentorship."
+                  : "Strict industry standards and blunt performance auditing."}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 pt-4">
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -220,9 +240,9 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
                   checked={setup.language === 'Spanish'}
                   onChange={(e) => setSetup({ ...setup, language: e.target.checked ? 'Spanish' : 'English' })}
                 />
@@ -240,9 +260,9 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </button>
-        </form>
-      </div>
-    </div>
+        </form >
+      </div >
+    </div >
   );
 };
 
