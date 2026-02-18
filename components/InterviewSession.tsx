@@ -174,7 +174,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: false
         }
       });
       streamRef.current = stream;
