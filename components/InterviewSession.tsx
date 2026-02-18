@@ -136,10 +136,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     isInitialized.current = true;
 
     try {
-      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-        throw new Error("API Key is missing. Check .env.local");
+      if (!import.meta.env.VITE_GEMINI_API_KEY) {
+        throw new Error("VITE_GEMINI_API_KEY is missing. Check .env.local");
       }
-      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
 
@@ -410,6 +410,9 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   useEffect(() => {
     initSession();
     return () => {
+      if (scriptProcessorRef.current) {
+        scriptProcessorRef.current.onaudioprocess = null;
+      }
       if (sessionRef.current) {
         sessionRef.current.close();
         sessionRef.current = null;
@@ -424,6 +427,17 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
   }, [initSession]);
 
   const handleEndInterview = () => {
+    // KILL SWITCH: Stop all media tracks and close session immediately
+    if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.onaudioprocess = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+    if (sessionRef.current) {
+      sessionRef.current.close();
+      sessionRef.current = null;
+    }
     onEnd([...allEntriesRef.current]);
   };
 
