@@ -254,8 +254,13 @@ export async function analyzeInterview(
       result.isLowPowerMode = true;
       result.transcript = cleanedTranscription;
       return result;
-    } catch (fallbackError) {
-      console.error("Critical: Fallback analysis also failed.");
+    } catch (fallbackError: any) {
+      console.error("Critical: Fallback analysis also failed.", fallbackError);
+
+      if (fallbackError.status === 429 || fallbackError.message?.includes('RESOURCE_EXHAUSTED') || fallbackError.message?.includes('429')) {
+        throw new Error("Our AI interviewers are currently at maximum daily capacity. Please try again tomorrow morning after the daily reset (Midnight PT)!");
+      }
+
       throw new Error(setup.language === 'Spanish'
         ? "No se pudo realizar el análisis. Inténtelo de nuevo más tarde."
         : "Failed to perform analysis. Please try again later.");
