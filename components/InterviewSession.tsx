@@ -136,7 +136,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     isInitialized.current = true;
 
     try {
-      const ai = new GoogleGenAI({ apiKey: "AIzaSyDEYYpKqolWP3Pbm6_q9dgppE-wuoRR6Ms" });
+      if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Check .env.local");
+      }
+      const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
 

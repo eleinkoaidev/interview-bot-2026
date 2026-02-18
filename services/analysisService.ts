@@ -20,7 +20,10 @@ async function runAnalysisRequest(
   modelName: string,
   isFallback: boolean = false
 ): Promise<Feedback> {
-  const ai = new GoogleGenAI({ apiKey: "AIzaSyDEYYpKqolWP3Pbm6_q9dgppE-wuoRR6Ms" });
+  if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+    throw new Error("API Key is missing. Check .env.local");
+  }
+  const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
   const isSpanish = setup.language === 'Spanish';
 
