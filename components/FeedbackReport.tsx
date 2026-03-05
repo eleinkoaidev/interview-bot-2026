@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Feedback, InterviewSetup } from '../types';
 import RadarChart from './RadarChart';
 
@@ -12,6 +12,15 @@ interface FeedbackReportProps {
 const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRestart }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Task 3 Cleanup: clear the localStorage backup ONLY after the report has
+  // successfully mounted and rendered — the final, crash-proof safety gate.
+  useEffect(() => {
+    try {
+      localStorage.removeItem('prointerviews_backup_transcript');
+      localStorage.removeItem('prointerviews_backup_setup');
+    } catch (_) { }
+  }, []);
 
   const isSpanish = setup.language === 'Spanish';
   const interviewerName = setup.interviewerName || 'Alex';
@@ -334,7 +343,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         {/* PDF Version Footer */}
         <div className="pdf-section pt-8 pb-4 text-center">
           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
-            Build: v2.0.5-stable
+            Build: v2.2.2-stable
           </p>
         </div>
       </div>

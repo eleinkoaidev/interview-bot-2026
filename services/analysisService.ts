@@ -12,7 +12,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Feedback, InterviewSetup, TranscriptionEntry } from "../types";
 import { cleanTranscriptionText } from "../utils/stringUtils";
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 
 async function runAnalysisRequest(
   setup: InterviewSetup,
@@ -227,43 +227,22 @@ export async function analyzeInterview(
     .join('\n');
 
   try {
-    const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-pro-preview');
+    const result = await runAnalysisRequest(setup, transcriptText, 'gemini-flash-latest');
     result.isPartial = isPartial;
     result.isLowPowerMode = false;
     result.transcript = cleanedTranscription;
     return result;
   } catch (error: any) {
-    console.warn("Pro analysis failed, attempting retry/fallback...", error);
+    console.error("Analysis failed.", error);
 
-    if (error.status === 429 || error.message?.includes('429')) {
-      await sleep(2000);
-      try {
-        const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-pro-preview');
-        result.isPartial = isPartial;
-        result.isLowPowerMode = false;
-        result.transcript = cleanedTranscription;
-        return result;
-      } catch (retryError) {
-        console.warn("Pro retry failed, engaging emergency Flash fallback.");
-      }
-    }
+    // Throw a retryable error — App.tsx will surface a 'Retry Analysis' button
+    // which reads the transcript backup saved to localStorage.
+    const retryMsg = setup.language === 'Spanish'
+      ? "No se pudo generar el análisis. Tu transcripción ha sido guardada. Usa 'Reintentar Análisis' para volver a intentarlo."
+      : "Analysis could not be generated. Your transcript has been saved. Click 'Retry Analysis' to try again.";
 
-    try {
-      const result = await runAnalysisRequest(setup, transcriptText, 'gemini-3-flash-preview', true);
-      result.isPartial = isPartial;
-      result.isLowPowerMode = true;
-      result.transcript = cleanedTranscription;
-      return result;
-    } catch (fallbackError: any) {
-      console.error("Critical: Fallback analysis also failed.", fallbackError);
-
-      if (fallbackError.status === 429 || fallbackError.message?.includes('RESOURCE_EXHAUSTED') || fallbackError.message?.includes('429')) {
-        throw new Error("Our AI interviewers are currently at maximum daily capacity. Please try again tomorrow morning after the daily reset (Midnight PT)!");
-      }
-
-      throw new Error(setup.language === 'Spanish'
-        ? "No se pudo realizar el análisis. Inténtelo de nuevo más tarde."
-        : "Failed to perform analysis. Please try again later.");
-    }
+    const err = new Error(retryMsg) as any;
+    err.retryable = true;
+    throw err;
   }
 }

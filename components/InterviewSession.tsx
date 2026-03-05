@@ -426,6 +426,18 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     };
   }, [initSession]);
 
+  // Task 3: useEffect Guard — saves transcript AFTER React has committed the new state
+  useEffect(() => {
+    if (displayTranscription.length > 0) {
+      try {
+        localStorage.setItem('prointerviews_backup_transcript', JSON.stringify(displayTranscription));
+        localStorage.setItem('prointerviews_backup_setup', JSON.stringify(setupRef.current));
+      } catch (e) {
+        console.warn('localStorage backup failed:', e);
+      }
+    }
+  }, [displayTranscription]);
+
   const handleEndInterview = () => {
     // KILL SWITCH: Stop all media tracks and close session immediately
     if (scriptProcessorRef.current) {
@@ -445,8 +457,20 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
     ? (isInterviewerSpeaking ? `${interviewerName} está hablando` : isProcessing ? `${interviewerName} está reflexionando...` : isUserSpeaking ? `${interviewerName} está escuchando...` : `${interviewerName} está listo`)
     : (isInterviewerSpeaking ? `${interviewerName} is speaking` : isProcessing ? `${interviewerName} is reflecting...` : isUserSpeaking ? `${interviewerName} is listening...` : `${interviewerName} is ready`);
 
+  const bannerText = setup.language === 'Spanish'
+    ? "\uD83C\uDFA4 Consejo Pro: Trate esto como si enviara un mensaje de voz. Espere al indicador de 'Escuchando' antes de hablar para asegurarse de que su respuesta se capture por completo."
+    : "\uD83C\uDFA4 Pro-Tip: Treat this like sending a voice message. Wait for the 'Listening' indicator before you start talking to ensure your full answer is captured.";
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
+      {/* Task 2: Turn-Taking Banner — z-index:100 ensures it never gets buried */}
+      <div style={{ zIndex: 100 }} className="relative mb-4 px-5 py-3 rounded-xl border-2 border-[#CC5500] bg-black shadow-lg">
+        <p className="text-white font-bold text-sm leading-relaxed">
+          <span className="text-[#CC5500] font-black">🎤</span>
+          {' '}{bannerText.replace('🎤 ', '')}
+        </p>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 min-h-[500px] flex flex-col relative">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-black">
           <div>
