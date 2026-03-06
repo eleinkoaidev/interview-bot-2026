@@ -94,7 +94,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 space-y-8 animate-fadeIn">
+    <div className="max-w-4xl mx-auto py-4 px-4 space-y-8 animate-fadeIn">
       {/* Dynamic CSS to prevent breaks inside cards during PDF generation */}
       <style>{`
         @media print {
@@ -204,12 +204,12 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         </div>
 
         <div className="pdf-section bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">{t.weightedMetrics}</h2>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t.standards}</p>
             </div>
-            <div className="hidden sm:block bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div className="hidden sm:block w-64 bg-gray-50 rounded-2xl p-4 border border-gray-100">
               <RadarChart metrics={{
                 technicalSkills: Number(feedback.metrics.technicalSkills || 0) * 5,
                 communication: Number(feedback.metrics.communication || 0) * 5,
@@ -349,7 +349,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         {/* PDF Version Footer */}
         <div className="pdf-section pt-8 pb-4 text-center">
           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
-            Build: v2.3.5-stable
+            Build: v2.3.6-stable
           </p>
         </div>
       </div>
