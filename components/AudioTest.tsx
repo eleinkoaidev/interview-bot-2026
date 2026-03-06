@@ -17,6 +17,8 @@ const SENSITIVITY_THRESHOLDS = {
 
 const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCancel }) => {
   const [micActive, setMicActive] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [checks, setChecks] = useState([false, false, false]);
   const [micLevel, setMicLevel] = useState(0);
   const [isAboveThreshold, setIsAboveThreshold] = useState(false);
   const [speakerTested, setSpeakerTested] = useState(false);
@@ -144,12 +146,8 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
         <div className="space-y-8">
           {/* Environment Calibration Section */}
           <div className="bg-black p-6 rounded-2xl shadow-inner space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-center items-center">
               <label className="block text-xs font-black text-[#CC5500] uppercase tracking-[0.2em]">Environment Calibration</label>
-              <div className="bg-gray-800 px-2 py-1 rounded-md">
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Current Threshold: </span>
-                <span className="text-[10px] text-white font-mono font-bold">{activeThreshold}</span>
-              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -237,14 +235,60 @@ const AudioTest: React.FC<AudioTestProps> = ({ setup, setSetup, onConfirm, onCan
             Cancel
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => setShowChecklist(true)}
             disabled={!micActive}
             className={`py-4 px-6 rounded-2xl font-black text-white shadow-lg transition-all uppercase tracking-widest text-sm ${micActive ? 'bg-black hover:bg-[#CC5500] border-2 border-black' : 'bg-gray-300 cursor-not-allowed'}`}
           >
-            Begin Interview
+            Continue
           </button>
         </div>
       </div>
+
+      {/* Pre-Flight Modal Overlay */}
+      {showChecklist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-100">
+            <h3 className="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight text-center">Success Checklist</h3>
+            <ul className="space-y-4 mb-8">
+              {[
+                "Find a quiet 'Interview Zone' (No background noise).",
+                "Wait for the 'Listening' indicator before you speak.",
+                "Give full, detailed answers to get the best feedback."
+              ].map((text, idx) => (
+                <li
+                  key={idx}
+                  onClick={() => {
+                    const newChecks = [...checks];
+                    newChecks[idx] = !newChecks[idx];
+                    setChecks(newChecks);
+                  }}
+                  className={`flex items-center space-x-4 p-4 rounded-xl border-2 transition-all cursor-pointer select-none ${checks[idx] ? 'bg-gray-50 border-[#CC5500]' : 'bg-white border-gray-100 hover:border-gray-300'}`}
+                >
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 flex-shrink-0 transition-colors ${checks[idx] ? 'bg-[#CC5500] border-[#CC5500]' : 'border-gray-300'}`}>
+                    {checks[idx] && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className={`font-bold text-base transition-colors ${checks[idx] ? 'text-gray-900' : 'text-gray-500'}`}>{text}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={onConfirm}
+                disabled={!checks.every(Boolean)}
+                className={`w-full py-4 text-white rounded-2xl font-black shadow-lg transition-all uppercase tracking-widest text-sm ${checks.every(Boolean) ? 'bg-[#CC5500] hover:bg-black' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                Begin Interview
+              </button>
+              <button
+                onClick={() => setShowChecklist(false)}
+                className="w-full py-3 text-gray-400 hover:text-gray-600 font-black transition-all uppercase tracking-widest text-xs"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,11 +11,11 @@ const RadarChart: React.FC<RadarChartProps> = ({ metrics }) => {
   const center = size / 2;
   const radius = size * 0.4;
   const axes = [
-    { label: 'Technical', key: 'technicalSkills' },
-    { label: 'Comm.', key: 'communication' },
-    { label: 'Logic', key: 'problemSolving' },
-    { label: 'Flex', key: 'adaptability' },
-    { label: 'Self', key: 'selfAwareness' },
+    { label: 'Technical Skills', key: 'technicalSkills' },
+    { label: 'Communication', key: 'communication' },
+    { label: 'Problem Solving', key: 'problemSolving' },
+    { label: 'Adaptability', key: 'adaptability' },
+    { label: 'Self-Awareness', key: 'selfAwareness' },
   ];
 
   const getCoordinates = (index: number, value: number) => {
@@ -97,7 +97,7 @@ const RadarChart: React.FC<RadarChartProps> = ({ metrics }) => {
 
         {/* Labels */}
         {axes.map((axis, i) => {
-          const { x, y } = getCoordinates(i, 120);
+          const { x, y } = getCoordinates(i, 130);
           return (
             <text
               key={i}

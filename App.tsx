@@ -263,7 +263,7 @@ const App: React.FC = () => {
           <p className="text-gray-500 text-[10px] flex items-center justify-center space-x-2">
             <span>&copy; 2026 OVHS Interviews. All Rights Reserved.</span>
             <span className="text-[#CC5500]/40">•</span>
-            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v2.2.2-stable</span>
+            <span className="font-mono uppercase tracking-tighter text-gray-600">Build v2.3.5-stable</span>
           </p>
         </div>
       </footer>

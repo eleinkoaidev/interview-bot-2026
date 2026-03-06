@@ -174,7 +174,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: false
+          autoGainControl: true
         }
       });
       streamRef.current = stream;
@@ -238,7 +238,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ setup, onEnd }) => 
                     processingTimeout.current = window.setTimeout(() => {
                       if (!isInterviewerSpeakingRef.current) setIsProcessing(true);
                     }, 1000);
-                  }, 500);
+                  }, 200);
                 }
               } else {
                 vadDebounceTimeRef.current = 0;

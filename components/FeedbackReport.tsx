@@ -37,7 +37,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
     credit: isSpanish ? 'Crédito Disponible' : 'Available Credit',
     keyAssets: isSpanish ? 'Fortalezas Clave' : 'Key Assets',
     growthMap: isSpanish ? 'Mapa de Crecimiento' : 'Growth Map',
-    notes: isSpanish ? `Notas de ${interviewerName}` : `${interviewerName}'s Notes`,
+    notes: isSpanish ? 'Fragmentos Impactantes' : 'Impactful Snippets',
     tryAnother: isSpanish ? 'Probar otro campo' : 'Try Another Field',
     date: isSpanish ? 'Fecha Generada' : 'Date Generated',
     assessmentMode: isSpanish ? 'Modo de Evaluación' : 'Assessment Mode',
@@ -164,10 +164,10 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         <div className="pdf-section bg-white rounded-3xl shadow-xl p-8 lg:p-10 border border-gray-100">
           <div className="flex flex-col md:flex-row gap-10 items-center">
             <div className="flex-1 space-y-4">
-              <h1 className="text-3xl lg:text-4xl font-black text-gray-900 leading-tight uppercase tracking-tight">
+              <h1 className="text-4xl lg:text-5xl font-black text-gray-900 leading-tight uppercase tracking-tight">
                 {feedback.assessmentMode === 'student' ? t.coachFeedback : t.summary}
               </h1>
-              <p className="text-gray-600 leading-relaxed text-lg font-medium text-left">
+              <p className="text-gray-800 leading-loose text-lg font-bold text-left">
                 {feedback.summary}
               </p>
             </div>
@@ -206,11 +206,17 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         <div className="pdf-section bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t.weightedMetrics}</h2>
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">{t.weightedMetrics}</h2>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t.standards}</p>
             </div>
             <div className="hidden sm:block bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <RadarChart metrics={feedback.metrics} />
+              <RadarChart metrics={{
+                technicalSkills: Number(feedback.metrics.technicalSkills || 0) * 5,
+                communication: Number(feedback.metrics.communication || 0) * 5,
+                problemSolving: Number(feedback.metrics.problemSolving || 0) * 5,
+                adaptability: Number(feedback.metrics.adaptability || 0) * 5,
+                selfAwareness: Number(feedback.metrics.selfAwareness || 0) * 5,
+              }} />
             </div>
           </div>
 
@@ -249,7 +255,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
                     <svg className={`w-4 h-4 mt-1 flex-shrink-0 ${percentage < 40 ? 'text-red-500' : 'text-[#CC5500]'}`} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
-                    <p className="text-sm text-gray-700 italic font-medium leading-relaxed">
+                    <p className="text-base text-gray-800 font-bold leading-loose">
                       {detail.justification}
                     </p>
                   </div>
@@ -261,7 +267,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="pdf-section bg-gray-50 rounded-3xl p-8 border-l-4 border-[#CC5500] shadow-sm">
-            <h2 className="text-lg font-black text-black mb-6 flex items-center uppercase tracking-widest">
+            <h2 className="text-xl font-black text-black mb-6 flex items-center uppercase tracking-widest">
               <svg className="w-5 h-5 mr-3 text-[#CC5500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -269,7 +275,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
             </h2>
             <ul className="space-y-4">
               {feedback.strengths.map((s, i) => (
-                <li key={i} className="flex items-start text-gray-700 font-medium bg-white p-3 rounded-xl border border-gray-100">
+                <li key={i} className="flex items-start text-gray-800 font-bold leading-loose bg-white p-4 rounded-xl border border-gray-100">
                   <span className="text-[#CC5500] font-black mr-3">✓</span>
                   <span>{s}</span>
                 </li>
@@ -278,7 +284,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
           </div>
 
           <div className="pdf-section bg-gray-50 rounded-3xl p-8 border-l-4 border-black shadow-sm">
-            <h2 className="text-lg font-black text-black mb-6 flex items-center uppercase tracking-widest">
+            <h2 className="text-xl font-black text-black mb-6 flex items-center uppercase tracking-widest">
               <svg className="w-5 h-5 mr-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -286,7 +292,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
             </h2>
             <ul className="space-y-4">
               {feedback.improvements.map((s, i) => (
-                <li key={i} className="flex items-start text-gray-700 font-medium bg-white p-3 rounded-xl border border-gray-100">
+                <li key={i} className="flex items-start text-gray-800 font-bold leading-loose bg-white p-4 rounded-xl border border-gray-100">
                   <span className="text-black font-black mr-3">→</span>
                   <span>{s}</span>
                 </li>
@@ -296,12 +302,12 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
-          <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight">{t.notes}</h2>
+          <h2 className="text-3xl font-black text-gray-900 mb-6 uppercase tracking-tight">{t.notes}</h2>
           <div className="space-y-6">
             {feedback.detailedAnalysis.map((item, i) => (
               <div key={i} className="pdf-section p-6 bg-gray-50 rounded-2xl border border-gray-100 transition-colors">
-                <p className="font-black text-gray-900 mb-4 text-sm uppercase tracking-wider">{item.question}</p>
-                <div className="flex items-start space-x-3 text-gray-700 bg-white p-4 rounded-xl border border-gray-100 font-medium italic">
+                <p className="font-black text-gray-900 mb-4 text-base uppercase tracking-wider leading-relaxed">{item.question}</p>
+                <div className="flex items-start space-x-3 text-gray-800 bg-white p-5 rounded-xl border border-gray-100 font-bold leading-loose">
                   <svg className="w-5 h-5 text-[#CC5500] mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
                   </svg>
@@ -322,16 +328,16 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
           </div>
         </div>
 
-        {feedback.transcript && (
+        {(feedback.cleanedTranscript || feedback.transcript) && (
           <div className="pdf-section bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
             <h2 className="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight">{t.transcriptTitle}</h2>
             <div className="space-y-4 border-t border-gray-100 pt-6">
-              {feedback.transcript.map((entry, i) => (
+              {(feedback.cleanedTranscript || feedback.transcript)!.map((entry, i) => (
                 <div key={i} className="flex flex-col space-y-1">
                   <p className="font-black text-gray-400 uppercase tracking-widest text-[8px]">
-                    {entry.role === 'interviewer' ? t.interviewerLabel : t.candidateLabel}:
+                    {i % 2 === 0 ? t.interviewerLabel : t.candidateLabel}:
                   </p>
-                  <p className="text-gray-700 text-[10px] sm:text-[9pt] leading-relaxed text-left">
+                  <p className="text-gray-700 text-[10px] sm:text-[9pt] leading-relaxed text-left whitespace-pre-wrap">
                     {entry.text}
                   </p>
                 </div>
@@ -343,7 +349,7 @@ const FeedbackReport: React.FC<FeedbackReportProps> = ({ feedback, setup, onRest
         {/* PDF Version Footer */}
         <div className="pdf-section pt-8 pb-4 text-center">
           <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">
-            Build: v2.2.2-stable
+            Build: v2.3.5-stable
           </p>
         </div>
       </div>

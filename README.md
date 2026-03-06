@@ -1,20 +1,20 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+🛡️ OVHS Interview Bot (Build v2.3.5-stable)
+An AI-driven professional mock interview platform designed for High School Cybersecurity students. This tool provides real-time voice interaction, performance analytics, and automated PDF reporting.
 
-# Run and deploy your AI Studio app
+🚀 Key Features (The "Laboratory" Build)
+Intelligent Voice UX: Real-time speech-to-text with integrated noise suppression and silence detection optimized for high-school environments.
 
-This contains everything you need to run your app locally.
+AI Transcript Reconstruction: A custom cleaning pipeline that repairs fragmented speech-to-text data (e.g., "cy ber se curity" -> "cybersecurity").
 
-View your app in AI Studio: https://ai.studio/apps/drive/1id-pGRIq_Y38XR-yLNlI9z1rzr9Dta1i
+Dynamic Performance Reporting: Automated radar charts and CTE-standard scoring across five core categories: Technical Skills, Communication, Problem Solving, Adaptability, and Self-Awareness.
 
-## Run Locally
+Resilience Logic: Automatic local storage of interview data to prevent progress loss during API "High Demand" spikes.
 
-**Prerequisites:**  Node.js
+🛠️ Technical Improvements
+Model: Powered by Gemini 3 Flash-Lite for low-latency, high-intelligence dialogue.
 
+Fixed Role Logic: Hard-coded transcript labeling to ensure the Interviewer and Candidate are correctly identified in PDF exports.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Radar Chart Sync: Synchronized data mapping between the AI-generated JSON scores and the SVG Radar Chart axes.
+
+UI/UX: Implemented a "Success Checklist" to calibrate the environment before the microphone initializes.

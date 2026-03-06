@@ -42,6 +42,8 @@ async function runAnalysisRequest(
       3. Anima al estudiante a revisar su transcripción e intentar de nuevo para superar su puntaje.
       4. MATEMÁTICAS: Los puntajes de las métricas deben ser números enteros entre 0 y 20.
       5. TOTAL: El campo 'score' debe ser igual a la suma de las cinco métricas.
+      6. SNIPPETS IMPACTANTES: En 'detailedAnalysis', SOLO incluye los 3-5 intercambios más importantes de la transcripción, no toda la entrevista.
+      7. LIMPIEZA DE TRANSCRIPCIÓN: Recibirás una transcripción sin procesar que puede contener fragmentación, espacios adicionales dentro de las palabras y tartamudeos del motor de voz a texto. Tu primera tarea es Limpiar y Reconstruir la transcripción en un formato profesional y legible, manteniendo el significado y la intención original del usuario. Inclúyelo en el campo 'cleanedTranscript'. IMPORTANTE: Al reconstruir la transcripción, DEBES preservar la distinción entre 'Interviewer' y 'Candidate'. Cada intercambio debe estar correctamente etiquetado según el flujo de la conversación.
       
       Devuelve JSON siguiendo el esquema proporcionado.`
     : `You are a Professional Mentor conducting a 'Mock Interview'. 
@@ -56,6 +58,8 @@ async function runAnalysisRequest(
       3. Encourage the student to review their transcript and try again to beat their score.
       4. MATH: Metric scores must be integers between 0 and 20.
       5. TOTAL: The 'score' field must equal the sum of the five metrics.
+      6. IMPACTFUL SNIPPETS: Under 'detailedAnalysis', ONLY include the 3-5 most important back-and-forth exchanges from the transcript rather than analyzing the whole block.
+      7. TRANSCRIPT CLEANUP: You will receive a raw transcript that may contain fragmentation, extra spaces within words, and stutters from the speech-to-text engine. Your first task is to Clean and Reconstruct the transcript into a professional, readable format while maintaining the user's original meaning and intent. Include this in the 'cleanedTranscript' field. IMPORTANT: When reconstructing the transcript, you MUST preserve the distinction between 'Interviewer' and 'Candidate'. Every exchange must be correctly labeled based on the flow of the conversation.
       
       Return JSON following the provided schema.`;
 
@@ -70,6 +74,8 @@ async function runAnalysisRequest(
       2. Sé directo y honesto en la auditoría de desempeño.
       3. MATEMÁTICAS: Los puntajes de las métricas deben ser números enteros entre 0 y 20.
       4. TOTAL: El campo 'score' debe ser igual a la suma de las cinco métricas.
+      5. SNIPPETS IMPACTANTES: En 'detailedAnalysis', SOLO incluye los 3-5 intercambios más importantes de la transcripción.
+      6. LIMPIEZA DE TRANSCRIPCIÓN: Recibirás una transcripción sin procesar que puede contener fragmentación, espacios adicionales dentro de las palabras y tartamudeos del motor de voz a texto. Tu primera tarea es Limpiar y Reconstruir la transcripción en un formato profesional y legible, manteniendo el significado y la intención original del usuario. Inclúyelo en el campo 'cleanedTranscript'. IMPORTANTE: Al reconstruir la transcripción, DEBES preservar la distinción entre 'Interviewer' y 'Candidate'. Cada intercambio debe estar correctamente etiquetado según el flujo de la conversación.
       
       Devuelve JSON siguiendo el esquema proporcionado.`
     : `You are a strict CTE Compliance Auditor (CTE Compliance Audit). Your job is to score students based ONLY on the industry standards and evidence in the transcript.
@@ -82,6 +88,8 @@ async function runAnalysisRequest(
       2. Be blunt and honest performance auditing.
       3. MATH: Metric scores must be integers between 0 and 20.
       4. TOTAL: The 'score' field must equal the sum of the five metrics.
+      5. IMPACTFUL SNIPPETS: Under 'detailedAnalysis', ONLY include the 3-5 most important back-and-forth exchanges from the transcript.
+      6. TRANSCRIPT CLEANUP: You will receive a raw transcript that may contain fragmentation, extra spaces within words, and stutters from the speech-to-text engine. Your first task is to Clean and Reconstruct the transcript into a professional, readable format while maintaining the user's original meaning and intent. Include this in the 'cleanedTranscript' field. IMPORTANT: When reconstructing the transcript, you MUST preserve the distinction between 'Interviewer' and 'Candidate'. Every exchange must be correctly labeled based on the flow of the conversation.
       
       Return JSON following the provided schema.`;
 
@@ -124,10 +132,12 @@ async function runAnalysisRequest(
     GRADING RIGOR:
     ${setup.difficulty === 'professional'
         ? `- STRICT AUDIT: Do not be "generous." If evidence is missing, score 0. Be blunt.
-         - Unprofessional behavior = score 0-5.`
+         - Unprofessional behavior = score 0-5.
+         - IMPACTFUL SNIPPETS: You must extract and analyze only the 3-5 most significant moments.`
         : `- MOCK INTERVIEW: Use a coaching tone. Avoid harsh phrases like "fundamentally lacked."
          - SCORING FLOOR: If the student attempted an answer, give 5-8 points minimum for effort. Only give 0 if there is NO audio for that section.
-         - MISTAKE HANDLING: For major errors (e.g. phone use), score low (5/20) but explain the professional standard gently.`}
+         - MISTAKE HANDLING: For major errors (e.g. phone use), score low (5/20) but explain the professional standard gently.
+         - IMPACTFUL SNIPPETS: You must extract and analyze only the 3-5 most significant educational moments.`}
     
     TRANSCRIPT:
     ${transcriptText}
@@ -177,9 +187,20 @@ async function runAnalysisRequest(
               },
               required: ["question", "feedback"]
             }
+          },
+          cleanedTranscript: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                role: { type: Type.STRING },
+                text: { type: Type.STRING }
+              },
+              required: ["role", "text"]
+            }
           }
         },
-        required: ["score", "summary", "strengths", "improvements", "metrics", "metricDetails", "detailedAnalysis", "assessmentMode"]
+        required: ["score", "summary", "strengths", "improvements", "metrics", "metricDetails", "detailedAnalysis", "assessmentMode", "cleanedTranscript"]
       }
     }
   });
